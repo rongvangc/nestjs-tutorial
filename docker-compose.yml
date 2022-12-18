@@ -1,0 +1,39 @@
+version: '3.9'
+services:
+  mongo:
+    image: mongo:latest
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ABCDE
+    ports:
+      - '27017:27017'
+    volumes:
+      - type: volume
+        source: sohoa_data
+        target: /data/db
+      - type: volume
+        source: sohoa_config
+        target: /data/configdb
+    networks:
+      sohoa_net:
+        aliases:
+          - main_db
+
+#  redis:
+#    image: redis:latest
+#    restart: always
+#    command: redis-server --requirepass ABCDE
+#    ports:
+#      - 6379:6379
+#    networks:
+#      fwd_net:
+#        aliases:
+#          - cache_db
+
+volumes:
+  sohoa_data:
+  sohoa_config:
+
+networks:
+  sohoa_net:
