@@ -1,14 +1,29 @@
-import { HttpException, HttpStatus, Injectable, Res } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+  Session,
+} from '@nestjs/common';
 import { AppUserCreateDto, AppUserLoginDto } from './User.interface';
 import { encodePassword, comparePassword } from 'src/utils/bcrypt';
 import { InjectModel } from '@nestjs/mongoose';
 import { AppUser, AppUserDocument } from './User.model';
 import { Model } from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
+import { Request } from 'express';
+
+declare module 'express-session' {
+  interface SessionData {
+    jwt: string;
+  }
+}
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(AppUser.name) private userModel: Model<AppUserDocument>,
+    private jwtService: JwtService,
   ) {}
 
   async create({ username, password }: AppUserCreateDto): Promise<AppUser> {
@@ -19,8 +34,8 @@ export class UserService {
 
   async login(
     { username, password }: AppUserLoginDto,
-    @Res() res,
-  ): Promise<boolean> {
+    req: Request,
+  ): Promise<string> {
     const user = await this.userModel.findOne({
       username,
     });
@@ -29,12 +44,11 @@ export class UserService {
 
     const isMathPassword = comparePassword(password, user.hash);
 
-    if (!isMathPassword)
-      throw new HttpException(
-        'Wrong username or password, could you checking again',
-        HttpStatus.UNAUTHORIZED,
-      );
+    if (!isMathPassword) throw new UnauthorizedException();
 
-    return isMathPassword;
+    const jwt = this.jwtService.sign({ username: user.username });
+    req.session.jwt = jwt;
+
+    return jwt;
   }
 }
